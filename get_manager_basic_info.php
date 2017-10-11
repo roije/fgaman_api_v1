@@ -1,11 +1,10 @@
 <?php
-
+$conn = include('db_connection.php');
 $leagueId = '788980';
 $url = 'https://fantasy.premierleague.com/drf/leagues-classic-standings/'.$leagueId;
 $resp = fetch($url);
 $jResp = json_decode($resp);
 
-$conn = getDBConnection();
 createTable($conn);
 //Column names in table
 $columnNames = array('id', 'firstName', 'lastName', 'points', 'teamValue');
@@ -62,7 +61,7 @@ function buildManagerArrayObject($manager, $id) {
 
 function saveOrUpdateInDatabase($conn, $columnNames, $insert_values, $question_marks, $onDuplicateString) {
     $conn ->beginTransaction();
-    $sql = "INSERT INTO Managers (" . implode(",", $columnNames ) . ") 
+    $sql = "INSERT INTO Managers (" . implode(",", $columnNames ) . ")
             VALUES " . implode(',', $question_marks) .
             " ON DUPLICATE KEY  UPDATE " . $onDuplicateString;
     $stmt = $conn->prepare ($sql);
@@ -112,23 +111,5 @@ function createTable($conn) {
         PRIMARY KEY (id));";
 
     $conn->exec($sql);
-}
-
-function getDBConnection() {
-    $servername = "localhost";
-    $username = "root";
-    $password = "root";
-    $db = "fantasy_gaman_v1";
-
-    try {
-        $conn = new PDO("mysql:host=$servername;dbname=$db", $username, $password);
-        // set the PDO error mode to exception
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        return $conn;
-    }
-    catch(PDOException $e)
-    {
-        echo "Connection failed: " . $e->getMessage();
-    }
 }
 ?>
