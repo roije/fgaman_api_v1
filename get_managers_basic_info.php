@@ -1,5 +1,8 @@
 <?php
+
+include('fetch.php');
 $conn = include('db_connection.php');
+
 $leagueId = '788980';
 $url = 'https://fantasy.premierleague.com/drf/leagues-classic-standings/'.$leagueId;
 $resp = fetch($url);
@@ -71,24 +74,6 @@ function saveOrUpdateInDatabase($conn, $columnNames, $insert_values, $question_m
         echo $e->getMessage();
     }
     $conn->commit();
-}
-
-function fetch($url) {
-    $curl = curl_init();
-
-    curl_setopt_array($curl, array(
-        CURLOPT_RETURNTRANSFER => 1,
-        CURLOPT_URL => $url
-    ));
-
-    // Send the request & save response to $resp
-    $resp = curl_exec($curl);
-
-    // Close request to clear up some resources
-    curl_close($curl);
-
-    return $resp;
-
 }
 
 function placeholders($text, $dataFieldsCount, $separator=","){
