@@ -30,11 +30,13 @@ $onDuplicateString = rtrim($onDuplicateString, ',');
 saveOrUpdateInDatabase($conn, $columnNames, $insert_values, $question_marks, $onDuplicateString);
 
 function saveOrUpdateInDatabase($conn, $columnNames, $insert_values, $question_marks, $onDuplicateString) {
+
     $conn ->beginTransaction();
     $sql = "INSERT INTO Players (" . implode(",", $columnNames ) . ")
             VALUES " . implode(',', $question_marks) .
         " ON DUPLICATE KEY  UPDATE " . $onDuplicateString;
     $stmt = $conn->prepare ($sql);
+    echo $sql;
     try {
         $stmt->execute($insert_values);
     } catch (PDOException $e){
