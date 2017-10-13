@@ -13,9 +13,11 @@ $jResp = json_decode($resp);
 //Get results array which is in the jResp object and store in list managers
 $listManagers = $jResp -> standings -> results;
 
-for ($j = 0; $j < 1; $j++) {
+for ($j = 0; $j < count($listManagers); $j++) {
     $id = $listManagers[$j] -> entry;
+    echo $id;
     $url = 'https://fantasy.premierleague.com/drf/entry/' . $id;
+    echo $url;
 
     $insert_values = array();
     $gameweekpicks = array();
@@ -23,48 +25,49 @@ for ($j = 0; $j < 1; $j++) {
         $url = 'https://fantasy.premierleague.com/drf/entry/'.$id.'/event/'.$i.'/picks';
         $response = fetch($url);
         $jResponse = json_decode($response);
-        $picks = $jResponse -> picks;
-        //array_push($picks)
-        array_push($gameweekpicks, $picks);
-        //$insert_values = array_merge($insert_values, $gameweekpicks);
-    }
-
-    $gameweekNum = 1;
-    for($k = 1; $k <= count($gameweekpicks); $k++) {
-        $gameweekpick = $gameweekpicks[$k -1];
-        foreach ($gameweekpick as $player) {
-            array_push($insert_values, $id);
-            array_push($insert_values, $gameweekNum);
-            foreach (get_object_vars($player) as $var => $val) {
-                array_push($insert_values, $val);
-                //print "<pre>";
-                //echo $val;
-                //print "</pre>";
-            }
-            $question_marks[] = '('  . placeholders('?', 7) . ')';
-
+        if($response !== "Error: 404") {
+            $picks = $jResponse -> picks;
+            //array_push($picks)
+            array_push($gameweekpicks, $picks);
+            //$insert_values = array_merge($insert_values, $gameweekpicks);
         }
-        //$count = count((array) $managerGameweekPicksArrayObject['gameweek_picks'][0][0]) + 2;
-        $gameweekNum++;
     }
-    /*
-    print "<pre>";
-    print_r($insert_values);
 
-    */
-    $managerGameweekPicksArrayObject = buildManagerGameweekPickArrayObject($id, $gameweekpicks);
-    //$insert_values = array_merge($insert_values, array_values($managerGameweekPicksArrayObject));
+    if(count($gameweekpicks) > 0) {
+        $gameweekNum = 1;
+        for($k = 1; $k <= count($gameweekpicks); $k++) {
+            $gameweekpick = $gameweekpicks[$k -1];
+            foreach ($gameweekpick as $player) {
+                array_push($insert_values, $id);
+                array_push($insert_values, $gameweekNum);
+                foreach (get_object_vars($player) as $var => $val) {
+                    array_push($insert_values, $val);
+                    //print "<pre>";
+                    //echo $val;
+                    //print "</pre>";
+                }
+                $question_marks[] = '('  . placeholders('?', 7) . ')';
+
+            }
+            //$count = count((array) $managerGameweekPicksArrayObject['gameweek_picks'][0][0]) + 2;
+            $gameweekNum++;
+        }
+
+        $managerGameweekPicksArrayObject = buildManagerGameweekPickArrayObject($id, $gameweekpicks);
+        //$insert_values = array_merge($insert_values, array_values($managerGameweekPicksArrayObject));
 
 
-    $columnNames = array('manager_id', 'gameweek_number', 'player_id', 'position', 'is_captain', 'is_vice_captain', 'multiplier');
+        $columnNames = array('manager_id', 'gameweek_number', 'player_id', 'position', 'is_captain', 'is_vice_captain', 'multiplier');
 
-    $onDuplicateString = "";
-    foreach ($columnNames as $datafield) {
-        $onDuplicateString .= $datafield."=VALUES(".$datafield.'),';
+        $onDuplicateString = "";
+        foreach ($columnNames as $datafield) {
+            $onDuplicateString .= $datafield."=VALUES(".$datafield.'),';
+        }
+        $onDuplicateString = rtrim($onDuplicateString, ',');
+
+        saveOrUpdateInDatabase($conn, $columnNames, $insert_values, $question_marks, $onDuplicateString);
     }
-    $onDuplicateString = rtrim($onDuplicateString, ',');
-
-    saveOrUpdateInDatabase($conn, $columnNames, $insert_values, $question_marks, $onDuplicateString);
+    $question_marks = [];
 
 }
 
@@ -73,7 +76,8 @@ function saveOrUpdateInDatabase($conn, $columnNames, $insert_values, $question_m
 
     $conn ->beginTransaction();
     $sql = "INSERT INTO managers_gw_picks (" . implode(",", $columnNames ) . ")
-            VALUES " . implode(',', $question_marks);
+            VALUES " . implode(',', $question_marks) .
+            " ON DUPLICATE KEY  UPDATE " . $onDuplicateString;
 
     $stmt = $conn->prepare ($sql);
     try {
