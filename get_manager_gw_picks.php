@@ -15,12 +15,11 @@ $listManagers = $jResp -> standings -> results;
 
 for ($j = 0; $j < count($listManagers); $j++) {
     $id = $listManagers[$j] -> entry;
-    echo $id;
     $url = 'https://fantasy.premierleague.com/drf/entry/' . $id;
-    echo $url;
 
     $insert_values = array();
     $gameweekpicks = array();
+    $gameweekNum = 1;
     for($i = 1; $i <= $currentGameweek; $i++) {
         $url = 'https://fantasy.premierleague.com/drf/entry/'.$id.'/event/'.$i.'/picks';
         $response = fetch($url);
@@ -30,11 +29,12 @@ for ($j = 0; $j < count($listManagers); $j++) {
             //array_push($picks)
             array_push($gameweekpicks, $picks);
             //$insert_values = array_merge($insert_values, $gameweekpicks);
+        } else {
+            ++$gameweekNum;
         }
     }
 
     if(count($gameweekpicks) > 0) {
-        $gameweekNum = 1;
         for($k = 1; $k <= count($gameweekpicks); $k++) {
             $gameweekpick = $gameweekpicks[$k -1];
             foreach ($gameweekpick as $player) {
@@ -42,9 +42,6 @@ for ($j = 0; $j < count($listManagers); $j++) {
                 array_push($insert_values, $gameweekNum);
                 foreach (get_object_vars($player) as $var => $val) {
                     array_push($insert_values, $val);
-                    //print "<pre>";
-                    //echo $val;
-                    //print "</pre>";
                 }
                 $question_marks[] = '('  . placeholders('?', 7) . ')';
 
@@ -54,8 +51,6 @@ for ($j = 0; $j < count($listManagers); $j++) {
         }
 
         $managerGameweekPicksArrayObject = buildManagerGameweekPickArrayObject($id, $gameweekpicks);
-        //$insert_values = array_merge($insert_values, array_values($managerGameweekPicksArrayObject));
-
 
         $columnNames = array('manager_id', 'gameweek_number', 'player_id', 'position', 'is_captain', 'is_vice_captain', 'multiplier');
 
@@ -67,6 +62,7 @@ for ($j = 0; $j < count($listManagers); $j++) {
 
         saveOrUpdateInDatabase($conn, $columnNames, $insert_values, $question_marks, $onDuplicateString);
     }
+    ++$gameweekNum;
     $question_marks = [];
 
 }
