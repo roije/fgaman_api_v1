@@ -19,26 +19,19 @@ foreach ($aPlayers as $aPlayer) {
         foreach (get_object_vars($gameweek) as $var => $val) {
             array_push($insert_values, $val);
         }
-        $question_marks[] = '('  . placeholders('?', $columnCount) . ')';
+        $question_marks[] = '('  . placeholders('?', $columnCount + 1) . ')';
     }
-    echo "<br>";
-    $onDuplicateString = buildOnDuplicateString($playerGameweekHistoryList, $playerId);
-}
-
-function buildOnDuplicateString($playerGameweekHistoryList, $playerId) {
-
     $arrayPlayerGameweekObject = (array) $playerGameweekHistoryList[0];
     $arrayPlayerGameweekObject = array('player_id' => $playerId) + $arrayPlayerGameweekObject;
-    print"<pre>";
-    print_r($arrayPlayerGameweekObject);
-    print"<pre>";
     $columnNames = array_keys($arrayPlayerGameweekObject);
     $onDuplicateString = "";
     foreach ($columnNames as $datafield) {
         $onDuplicateString .= $datafield."=VALUES(".$datafield.'),';
     }
     $onDuplicateString = rtrim($onDuplicateString, ',');
-    return $onDuplicateString;
+
+    saveOrUpdateInDatabase($conn, $columnNames, $insert_values, $question_marks, $onDuplicateString);
+    $question_marks = [];
 }
 
 function placeholders($text, $dataFieldsCount, $separator=","){
@@ -59,6 +52,20 @@ function getPlayersId($conn) {
     return $aData;
 }
 
+
+function saveOrUpdateInDatabase($conn, $columnNames, $insert_values, $question_marks, $onDuplicateString) {
+    $conn ->beginTransaction();
+    $sql = "INSERT INTO Players_games (" . implode(",", $columnNames ) . ")
+            VALUES " . implode(',', $question_marks) .
+        " ON DUPLICATE KEY  UPDATE " . $onDuplicateString;
+    $stmt = $conn->prepare ($sql);
+    try {
+        $stmt->execute($insert_values);
+    } catch (PDOException $e){
+        echo $e->getMessage();
+    }
+    $conn->commit();
+}
 
 function createTable($conn) {
     $sql = "CREATE TABLE IF NOT EXISTS Players_games(
